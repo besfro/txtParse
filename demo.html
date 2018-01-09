@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>txt文档解析插件</title>
+</head>
+<body>
+	<textarea id="text" style="width:500px;height:200px;">
+	李明 男 411526198609114505 15221322141 19910112
+	37070019800917732X 方念珍 女 15223633241 19780212
+	方念珍37070019800917732X女15223633241
+	何阳旭,341324197305108855,女,15236322412
+	高宜春#130930197809045835#女#15241236325
+	</textarea>
+	<script>
+		class TxtParse {
+			constructor(opts) {
+				//建立索引
+				this.defkeys = (() => {
+					const arr = []
+					for(let item of this.def.valueOf()) {
+						arr.push(item.key)
+					}
+					return arr
+				})()
+				//初始化
+				this.init(opts)
+			}
+			//默认处理的字段
+			get def() {
+				return [
+					{key: 'name', reg: /[\u4e00-\u9fa5]{2,5}/ },
+					{key: 'cardNum', reg: /\d{17}(?:x|\d)/i },
+					{key: 'mobile', reg: /1[34567]\d{9}/ },
+					{key: 'sex', reg: /男|女|男性|女性/ },
+					{key: 'birthday', reg: /\d{4}-\d{2}-\d{2}/ }
+				]
+			}
+			init(opts) {
+				//实例化的配置 私有属性
+				const [fields, defkeys] = [Array.from(this.def), this.defkeys]
+				//合并配置
+				if(opts && Array.isArray(opts)) {
+					for(let item of opts.valueOf()) {
+						if(item.key && item.reg && Object.prototype.toString.call(item.reg) === '[object RegExp]') {
+							let ind = defkeys.indexOf(item.key)
+							ind !== -1 ? fields.splice(ind, 1, item) : fields.push(item)
+						}
+					}
+				}	
+				this.getFields = () => {
+					return fields
+				}
+
+			}
+			parser(str, process) {
+				if(typeof str !== 'string') return
+				return this.toJson(this.toArr(str), this.getFields(), process)
+			}
+			toJson(arr, reg, process) {
+				const jsonArr = []
+				for(let [index, item] of arr.entries()) {
+					let itemObj = {}
+					for(let regItem of reg.valueOf()) {
+						item.replace(regItem.reg, val => {
+							if(val) itemObj[regItem.key] = val
+							return ''
+						})
+					}
+					itemObj = process && process(itemObj) || itemObj
+					jsonArr.push(itemObj)
+				}
+				return jsonArr
+			}
+			toArr(str) {
+				const arr = str.split('\n')
+				return str.split('\n')
+			}
+			static parser(str, process) {
+				if(typeof str !== 'string') return
+				const parser = new TxtParse()
+				return parser.parser(str, process)
+			}
+		}
+
+		//调用方法
+		const txt = document.getElementById('text').value
+		console.log(TxtParse.parser(txt))
+
+		const parser = new TxtParse([
+			{key: 'mobile', reg: /\d{5}/}
+		])
+		console.log(parser.parser(txt))
+	</script>
+</body>
+</html>
